@@ -1,122 +1,377 @@
+
 import 'package:flutter/material.dart';
+import 'package:quiz_calculator/Operand.dart';
+import 'package:quiz_calculator/Operator.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const CalculatorApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class CalculatorApp extends StatelessWidget {
+  const CalculatorApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'Calculator',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        primarySwatch: Colors.deepPurple,
+        scaffoldBackgroundColor: Colors.grey[900],
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const CalculatorHome(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class CalculatorHome extends StatefulWidget {
+  const CalculatorHome({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<CalculatorHome> createState() => _CalculatorHomeState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _CalculatorHomeState extends State<CalculatorHome> {
+  String _output = "0";
 
-  void _incrementCounter() {
+  Operand firstOperand = Operand();
+  Operand? secondOperand;
+  late Operand currentOperand = firstOperand;
+  Operator? operator;
+
+  // 🔹 История операций
+  List<String> history = [];
+
+  void update() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _output = currentOperand.toString();
     });
+  }
+
+  void clear() {
+    firstOperand = Operand();
+    secondOperand = null;
+    currentOperand = firstOperand;
+    operator = null;
+
+    history.clear(); // очищаем историю
+
+    update();
+  }
+
+  void equal() {
+    if (operator == null || secondOperand == null) return;
+
+    String expression =
+        "${firstOperand.toString()} ${operator.toString()} ${secondOperand.toString()}";
+
+    firstOperand.operation(operator!, secondOperand!);
+
+    // 🔹 добавляем в историю
+    history.add("$expression = ${firstOperand.toString()}");
+
+    secondOperand = null;
+    operator = null;
+    currentOperand = firstOperand;
+
+    update();
+  }
+
+  void onDigitClick(int digit) {
+    currentOperand.addDigit(digit);
+    update();
+  }
+
+  void onOperatorClick(Operator operator) {
+    if (this.operator != null) {
+      equal();
+    }
+    this.operator = operator;
+    secondOperand = Operand();
+    currentOperand = secondOperand!;
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    if (history.length > 3) history = history.sublist(history.length - 3);
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      backgroundColor: Color(0xFF222630),
+      body: SafeArea(
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+          children: [
+            SizedBox(height: 40),
+
+            SizedBox(
+              height: 120,
+              child: ListView(
+                reverse: true,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: history.reversed.map((item) {
+                  return Text(
+                    item,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(color: Colors.grey, fontSize: 28),
+                  );
+                }).toList(),
+              ),
+            ),
+
+            Expanded(
+              flex: 1,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                alignment: Alignment.bottomRight,
+                child: Text(
+                  ( history.isEmpty ? '' : '= ' ) + _output,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 56,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+
+            Expanded(
+              flex: 6,
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Button(
+                        text: "C",
+                        onPressed: clear,
+                        color: Color(0xFF626B7C),
+                        secondColor: Color(0xFF465262),
+                      ),
+                      Button(
+                        text: "+/-",
+                        onPressed: () {
+                          currentOperand.changeSign();
+                          update();
+                        },
+                        color: Color(0xFF626B7C),
+                        secondColor: Color(0xFF465262),
+                      ),
+                      Button(
+                        text: "%",
+                        onPressed: () {},
+                        color: Color(0xFF626B7C),
+                        secondColor: Color(0xFF465262),
+                      ),
+                      Button(
+                        text: "÷",
+                        onPressed: () {
+                          onOperatorClick(Operator.divide);
+                        },
+                        color: Color(0xFFE28D21),
+                        secondColor: Color(0xFFDD732F),
+                      ),
+                    ],
+                  ),
+
+                  Row(
+                    children: [
+                      Button(
+                        text: "7",
+                        onPressed: () {
+                          onDigitClick(7);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "8",
+                        onPressed: () {
+                          onDigitClick(8);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "9",
+                        onPressed: () {
+                          onDigitClick(9);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "×",
+                        onPressed: () {
+                          onOperatorClick(Operator.multiply);
+                        },
+                        color: Color(0xFFE28D21),
+                        secondColor: Color(0xFFDD732F),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Button(
+                        text: "4",
+                        onPressed: () {
+                          onDigitClick(4);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "5",
+                        onPressed: () {
+                          onDigitClick(5);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "6",
+                        onPressed: () {
+                          onDigitClick(6);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "-",
+                        onPressed: () {
+                          onOperatorClick(Operator.subtract);
+                        },
+                        color: Color(0xFFE28D21),
+                        secondColor: Color(0xFFDD732F),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Button(
+                        text: "1",
+                        onPressed: () {
+                          onDigitClick(1);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "2",
+                        onPressed: () {
+                          onDigitClick(2);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "3",
+                        onPressed: () {
+                          onDigitClick(3);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "+",
+                        onPressed: () {
+                          onOperatorClick(Operator.add);
+                        },
+                        color: Color(0xFFE28D21),
+                        secondColor: Color(0xFFDD732F),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Button(
+                        text: "0",
+                        onPressed: () {
+                          onDigitClick(0);
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                        flex: 2,
+                      ),
+                      Button(
+                        text: ".",
+                        onPressed: () {
+                          currentOperand.addComma();
+                          update();
+                        },
+                        color: Color(0xFF393E51),
+                        secondColor: Color(0xFF2A303E),
+                      ),
+                      Button(
+                        text: "=",
+                        onPressed: () {
+                          equal();
+                        },
+                        color: Color(0xFFE28D21),
+                        secondColor: Color(0xFFDD732F),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+class Button extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+  final Color color;
+  final Color secondColor;
+  final double fontSize;
+  final int flex;
+
+  const Button({
+    super.key,
+    required this.text,
+    required this.onPressed,
+    required this.color,
+    required this.secondColor,
+    this.fontSize = 24,
+    this.flex = 1,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      flex: flex,
+      child: Padding(
+        padding: EdgeInsets.all(4),
+        child: GestureDetector(
+          onTap: onPressed,
+          child: Container(
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            padding: EdgeInsets.all(5.13),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [secondColor, color],
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    text,
+                    style: TextStyle(color: Colors.white, fontSize: fontSize),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
